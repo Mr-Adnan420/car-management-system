@@ -7,8 +7,9 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-2xl">Loading...</div>
+      <div className="flex flex-col items-center justify-center min-h-screen app-bg gap-4">
+        <div className="spinner" />
+        <p className="text-sm font-medium text-[var(--text-muted)]">Loading...</p>
       </div>
     );
   }

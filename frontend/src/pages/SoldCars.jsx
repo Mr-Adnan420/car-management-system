@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import { carAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { FaEye, FaFileExcel } from 'react-icons/fa';
+import { PageHeader, LoadingState, EmptyState } from '../components/ui';
+import { FaEye, FaFileExcel, FaCheckCircle, FaCar } from 'react-icons/fa';
 
 const SoldCars = () => {
   const [cars, setCars] = useState([]);
@@ -13,7 +13,7 @@ const SoldCars = () => {
     try {
       const res = await carAPI.getSoldCars();
       setCars(res.data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load cars');
     } finally {
       setLoading(false);
@@ -33,61 +33,104 @@ const SoldCars = () => {
       link.setAttribute('download', `car-${registrationNumber}.xlsx`);
       document.body.appendChild(link);
       link.click();
-    } catch (err) {
+      document.body.removeChild(link);
+    } catch {
       toast.error('Failed to export');
     }
   };
 
   const calculateProfit = (car) => {
-    const partnerInvTotal = car.partnerInvestments?.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0) || 0;
-    const fuelTotal = car.fuelEntries?.reduce((sum, fuel) => sum + (Number(fuel.amount) || 0), 0) || 0;
-    const expenseTotal = car.expenseEntries?.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) || 0;
-    const totalInvestment = partnerInvTotal + fuelTotal + expenseTotal + (Number(car.purchasePrice) || 0);
-    const profit = (car.saleDetails?.salePrice || 0) - totalInvestment;
-    return profit;
+    const fuelTotal = (car.fuelEntries || []).reduce(
+      (sum, fuel) => sum + (Number(fuel.amount) || 0),
+      0
+    );
+    const expenseTotal = (car.expenseEntries || []).reduce(
+      (sum, exp) => sum + (Number(exp.amount) || 0),
+      0
+    );
+    const totalCost = (Number(car.purchasePrice) || 0) + fuelTotal + expenseTotal;
+    return (Number(car.saleDetails?.salePrice) || 0) - totalCost;
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <Sidebar />
-      <div className="ml-64 flex-1 p-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-8">Sold Cars</h1>
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-xl">Loading...</div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50">
+    <div>
+      <PageHeader
+        title="Sold Cars"
+        subtitle="Closed deals and realized profit or loss."
+      />
+
+      {loading ? (
+        <LoadingState label="Loading inventory..." />
+      ) : cars.length === 0 ? (
+        <EmptyState
+          icon={FaCheckCircle}
+          title="No sold cars yet"
+          description="Mark a draft car as sold to see it appear in this history."
+          action={
+            <Link to="/draft-cars" className="btn btn-success">
+              <FaCar size={12} />
+              View Draft Cars
+            </Link>
+          }
+        />
+      ) : (
+        <div className="panel overflow-hidden animate-fade-up p-0">
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Car Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Purchase Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Sale Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Profit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Sale Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                  <th>Car Details</th>
+                  <th>Purchase Price</th>
+                  <th>Sale Price</th>
+                  <th>Profit / Loss</th>
+                  <th>Sale Date</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody>
                 {cars.map((car) => {
                   const profit = calculateProfit(car);
                   return (
-                    <tr key={car._id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap">{car.carName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">₹{Number(car.purchasePrice).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">₹{Number(car.saleDetails?.salePrice).toLocaleString()}</td>
-                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{profit.toLocaleString()}
+                    <tr key={car._id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[var(--success-soft)] text-[var(--success)] flex items-center justify-center shrink-0">
+                            <FaCar size={14} />
+                          </div>
+                          <div>
+                            <p className="font-display font-bold text-sm sm:text-base">{car.carName}</p>
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {car.company} · {car.model}
+                            </p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{new Date(car.saleDetails?.saleDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          <Link to={`/car/${car._id}`} className="text-blue-600 hover:text-blue-800">
-                            <FaEye />
+                      <td className="text-sm font-semibold whitespace-nowrap">
+                        Rs {Number(car.purchasePrice).toLocaleString()}
+                      </td>
+                      <td className="text-sm font-semibold whitespace-nowrap">
+                        Rs {Number(car.saleDetails?.salePrice).toLocaleString()}
+                      </td>
+                      <td>
+                        <span className={`badge ${profit >= 0 ? 'badge-success' : 'badge-danger'}`}>
+                          {profit >= 0 ? '+' : ''}Rs {profit.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="text-sm text-[var(--text-muted)] whitespace-nowrap">
+                        {new Date(car.saleDetails?.saleDate).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link to={`/car/${car._id}`} className="btn btn-ghost btn-icon" title="View">
+                            <FaEye size={13} className="text-[var(--accent)]" />
                           </Link>
-                          <button onClick={() => exportExcel(car._id, car.registrationNumber)} className="text-emerald-600 hover:text-emerald-800">
-                            <FaFileExcel />
+                          <button
+                            type="button"
+                            onClick={() => exportExcel(car._id, car.registrationNumber)}
+                            className="btn btn-ghost btn-icon"
+                            title="Export Excel"
+                          >
+                            <FaFileExcel size={13} className="text-[var(--success)]" />
                           </button>
                         </div>
                       </td>
@@ -96,12 +139,9 @@ const SoldCars = () => {
                 })}
               </tbody>
             </table>
-            {cars.length === 0 && (
-              <div className="p-8 text-center text-slate-500">No sold cars found</div>
-            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

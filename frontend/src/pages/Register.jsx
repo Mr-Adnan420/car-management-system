@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
+import { FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
+import { AuthLayout, FieldError, IconField } from '../components/ui';
 
 const Register = () => {
   const { register: registerUser } = useAuth();
@@ -29,59 +31,86 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-slate-800">Register</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+    <AuthLayout
+      title="Create account"
+      subtitle="Start tracking cars, partners, and profits today."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="text-[var(--accent)] font-semibold hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="field-label">Full Name</label>
+          <IconField icon={FaUser}>
             <input
               type="text"
               {...register('name', { required: 'Name is required' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="field"
+              placeholder="Your name"
+              autoComplete="name"
             />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          </IconField>
+          <FieldError message={errors.name?.message} />
+        </div>
+
+        <div>
+          <label className="field-label">Email</label>
+          <IconField icon={FaEnvelope}>
             <input
               type="email"
               {...register('email', { required: 'Email is required' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="field"
+              placeholder="you@dealership.com"
+              autoComplete="email"
             />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          </IconField>
+          <FieldError message={errors.email?.message} />
+        </div>
+
+        <div>
+          <label className="field-label">Password</label>
+          <IconField icon={FaLock}>
             <input
               type="password"
-              {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Password must be at least 6 characters' } })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 6, message: 'Password must be at least 6 characters' },
+              })}
+              className="field"
+              placeholder="Min. 6 characters"
+              autoComplete="new-password"
             />
-            {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
-            <input
-                      type="password"
-                      {...register('confirmPassword', { required: 'Confirm password is required', validate: (value) => value === password || 'Passwords do not match' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-            {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword.message}</p>}
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Loading...' : 'Register'}
-          </button>
-        </form>
-        <div className="mt-6 text-center text-slate-600">
-          Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
+          </IconField>
+          <FieldError message={errors.password?.message} />
         </div>
-      </div>
-    </div>
+
+        <div>
+          <label className="field-label">Confirm Password</label>
+          <IconField icon={FaLock}>
+            <input
+              type="password"
+              {...register('confirmPassword', {
+                required: 'Confirm password is required',
+                validate: (value) => value === password || 'Passwords do not match',
+              })}
+              className="field"
+              placeholder="Repeat password"
+              autoComplete="new-password"
+            />
+          </IconField>
+          <FieldError message={errors.confirmPassword?.message} />
+        </div>
+
+        <button type="submit" disabled={loading} className="btn btn-primary w-full py-3.5 mt-2">
+          {loading ? 'Creating account...' : 'Create Account'}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

@@ -1,19 +1,49 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import { carAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { FaPlus, FaTrash } from 'react-icons/fa';
+import {
+  FaPlus,
+  FaTrash,
+  FaCar,
+  FaUsers,
+  FaGasPump,
+  FaReceipt,
+  FaHandshake,
+} from 'react-icons/fa';
+import { PageHeader, Panel, SectionTitle, FieldError } from '../components/ui';
+import DealSummary from '../components/DealSummary';
+import {
+  buildDealSummary,
+  hasSaleData,
+  formatRs,
+  formatRsSigned,
+  formatPercent,
+  sumAmounts,
+} from '../utils/calculations';
 
 const AddCar = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { register, control, handleSubmit, formState: { errors } } = useForm({
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       partnerInvestments: [],
       fuelEntries: [],
       expenseEntries: [],
+      saleDetails: {
+        saleDate: '',
+        salePrice: '',
+        soldTo: '',
+        notes: '',
+      },
     },
   });
 
@@ -35,13 +65,38 @@ const AddCar = () => {
     remove: removeExpense,
   } = useFieldArray({ control, name: 'expenseEntries' });
 
+  const watched = watch();
+  const deal = buildDealSummary({
+    partnerInvestments: watched.partnerInvestments,
+    fuelEntries: watched.fuelEntries,
+    expenseEntries: watched.expenseEntries,
+    purchasePrice: watched.purchasePrice,
+    salePrice: watched.saleDetails?.salePrice,
+  });
+  const willSell = hasSaleData(watched.saleDetails);
+  const totalPartnerInv = sumAmounts(watched.partnerInvestments);
+  const today = new Date().toISOString().split('T')[0];
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await carAPI.createCar(data);
-      toast.success('Car added successfully!');
-      navigate('/draft-cars');
-    } catch (err) {
+      const sold = hasSaleData(data.saleDetails);
+      const payload = {
+        ...data,
+        saleDetails: sold
+          ? {
+              saleDate: data.saleDetails.saleDate || undefined,
+              salePrice: Number(data.saleDetails.salePrice),
+              soldTo: data.saleDetails.soldTo || '',
+              notes: data.saleDetails.notes || '',
+            }
+          : undefined,
+        status: sold ? 'sold' : 'draft',
+      };
+      await carAPI.createCar(payload);
+      toast.success(sold ? 'Car saved to Sold' : 'Car saved as Draft');
+      navigate(sold ? '/sold-cars' : '/draft-cars');
+    } catch {
       toast.error('Failed to add car');
     } finally {
       setLoading(false);
@@ -49,292 +104,404 @@ const AddCar = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <Sidebar />
-      <div className="ml-64 flex-1 p-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-8">Add New Car</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">Purchase Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Car Name *</label>
-                <input
-                  {...register('carName', { required: 'Car name is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.carName && <p className="text-red-500 text-sm">{errors.carName.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Company *</label>
-                <input
-                  {...register('company', { required: 'Company is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.company && <p className="text-red-500 text-sm">{errors.company.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Model *</label>
-                <input
-                  {...register('model', { required: 'Model is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.model && <p className="text-red-500 text-sm">{errors.model.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number *</label>
-                <input
-                  {...register('registrationNumber', { required: 'Registration number is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.registrationNumber && <p className="text-red-500 text-sm">{errors.registrationNumber.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Chassis Number</label>
-                <input
-                  {...register('chassisNumber')}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Engine Number</label>
-                <input
-                  {...register('engineNumber')}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
-                <input
-                  {...register('color')}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date *</label>
-                <input
-                  type="date"
-                  {...register('purchaseDate', { required: 'Purchase date is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.purchaseDate && <p className="text-red-500 text-sm">{errors.purchaseDate.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Price *</label>
-                <input
-                  type="number"
-                  {...register('purchasePrice', { required: 'Purchase price is required' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {errors.purchasePrice && <p className="text-red-500 text-sm">{errors.purchasePrice.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Purchased From</label>
-                <input
-                  {...register('purchasedFrom')}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea
-                  {...register('purchaseNotes')}
-                  rows="3"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
+    <div className="max-w-4xl mx-auto">
+      <PageHeader
+        title="Add New Car"
+        subtitle="Partners get Share % & profit Amount live — sale price decides Draft vs Sold."
+      />
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 animate-fade-up">
+        <Panel>
+          <SectionTitle icon={FaCar} className="mb-4">
+            Purchase Information
+          </SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="field-label">Car Name *</label>
+              <input
+                {...register('carName', { required: 'Car name is required' })}
+                className="field"
+                placeholder="e.g. Civic Oriel"
+              />
+              <FieldError message={errors.carName?.message} />
+            </div>
+            <div>
+              <label className="field-label">Company *</label>
+              <input
+                {...register('company', { required: 'Company is required' })}
+                className="field"
+                placeholder="e.g. Honda"
+              />
+              <FieldError message={errors.company?.message} />
+            </div>
+            <div>
+              <label className="field-label">Model *</label>
+              <input
+                {...register('model', { required: 'Model is required' })}
+                className="field"
+                placeholder="e.g. 2022"
+              />
+              <FieldError message={errors.model?.message} />
+            </div>
+            <div>
+              <label className="field-label">Registration Number *</label>
+              <input
+                {...register('registrationNumber', { required: 'Registration number is required' })}
+                className="field"
+                placeholder="e.g. LE-12-3456"
+              />
+              <FieldError message={errors.registrationNumber?.message} />
+            </div>
+            <div>
+              <label className="field-label">Chassis Number</label>
+              <input {...register('chassisNumber')} className="field" />
+            </div>
+            <div>
+              <label className="field-label">Engine Number</label>
+              <input {...register('engineNumber')} className="field" />
+            </div>
+            <div>
+              <label className="field-label">Color</label>
+              <input {...register('color')} className="field" />
+            </div>
+            <div>
+              <label className="field-label">Purchase Date *</label>
+              <input
+                type="date"
+                {...register('purchaseDate', { required: 'Purchase date is required' })}
+                className="field"
+              />
+              <FieldError message={errors.purchaseDate?.message} />
+            </div>
+            <div>
+              <label className="field-label">Purchase Price (Rs) *</label>
+              <input
+                type="number"
+                {...register('purchasePrice', { required: 'Purchase price is required' })}
+                className="field"
+                placeholder="e.g. 4500000"
+              />
+              <FieldError message={errors.purchasePrice?.message} />
+            </div>
+            <div>
+              <label className="field-label">Purchased From</label>
+              <input {...register('purchasedFrom')} className="field" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="field-label">Notes</label>
+              <textarea {...register('purchaseNotes')} rows="3" className="field" />
             </div>
           </div>
+        </Panel>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-slate-800">Partner Investments</h2>
-              <button
-                type="button"
-                onClick={() => appendInvestment({ partnerName: '', amount: '', date: new Date().toISOString().split('T')[0] })}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaPlus />
-                Add Partner
-              </button>
-            </div>
-            <div className="space-y-3">
-              {investmentFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Partner Name *</label>
-                    <input
-                      {...register(`partnerInvestments.${index}.partnerName`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
-                    <input
-                      type="number"
-                      {...register(`partnerInvestments.${index}.amount`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
-                    <input
-                      type="date"
-                      {...register(`partnerInvestments.${index}.date`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeInvestment(index)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+        {/* Partners — like Car Dealer Ledger */}
+        <Panel>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <SectionTitle icon={FaUsers}>Partners</SectionTitle>
+            <button
+              type="button"
+              onClick={() => appendInvestment({ partnerName: '', amount: '', date: today })}
+              className="btn btn-primary text-xs py-2 px-3"
+            >
+              <FaPlus size={10} />
+              Add Partner
+            </button>
+          </div>
+
+          {investmentFields.length === 0 ? (
+            <p className="text-xs text-[var(--text-muted)] italic mb-3">
+              No partners yet. Add partners to split profit by investment share.
+            </p>
+          ) : (
+            <div className="space-y-3 mb-4">
+              {investmentFields.map((field, index) => {
+                const amount = Number(watched.partnerInvestments?.[index]?.amount) || 0;
+                const share =
+                  totalPartnerInv > 0 ? (amount / totalPartnerInv) * 100 : 0;
+                const partnerAmount =
+                  deal.hasSale && deal.totals.netProfit !== null
+                    ? (share / 100) * deal.totals.netProfit
+                    : null;
+
+                return (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end p-4 rounded-xl border border-dashed border-[var(--border-strong)]"
                   >
-                    <FaTrash />
-                  </button>
-                </div>
-              ))}
+                    <div className="lg:col-span-2">
+                      <label className="field-label">Name *</label>
+                      <input
+                        {...register(`partnerInvestments.${index}.partnerName`, {
+                          required: 'Required',
+                        })}
+                        className="field"
+                        placeholder="Partner name"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">Investment (Rs) *</label>
+                      <input
+                        type="number"
+                        {...register(`partnerInvestments.${index}.amount`, {
+                          required: 'Required',
+                        })}
+                        className="field"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">Share %</label>
+                      <div className="field flex items-center font-bold text-[var(--accent)] bg-[var(--accent-soft)] border-[var(--accent)]/20">
+                        {formatPercent(share)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="field-label">Amount (Profit)</label>
+                      <div
+                        className={`field flex items-center font-bold ${
+                          partnerAmount == null
+                            ? 'text-[var(--text-soft)]'
+                            : partnerAmount >= 0
+                              ? 'text-[var(--success)]'
+                              : 'text-[var(--danger)]'
+                        }`}
+                      >
+                        {deal.hasSale ? formatRsSigned(partnerAmount) : '—'}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="hidden" {...register(`partnerInvestments.${index}.date`)} />
+                      <button
+                        type="button"
+                        onClick={() => removeInvestment(index)}
+                        className="btn btn-danger flex-1"
+                      >
+                        <FaTrash size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-slate-800">Fuel Entries</h2>
-              <button
-                type="button"
-                onClick={() => appendFuel({ partnerName: '', amount: '', fuelDate: new Date().toISOString().split('T')[0], notes: '' })}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaPlus />
-                Add Fuel Entry
-              </button>
-            </div>
-            <div className="space-y-3">
-              {fuelFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+          <div className="flex items-center justify-between rounded-xl bg-[var(--accent-soft)] px-4 py-3 border border-[var(--accent)]/20">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              Total Partner Investment
+            </span>
+            <span className="font-display font-bold text-[var(--accent)]">
+              {formatRs(totalPartnerInv)}
+            </span>
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <SectionTitle icon={FaGasPump}>Fuel Entries</SectionTitle>
+            <button
+              type="button"
+              onClick={() =>
+                appendFuel({ partnerName: '', amount: '', fuelDate: today, notes: '' })
+              }
+              className="btn btn-primary text-xs py-2 px-3"
+            >
+              <FaPlus size={10} />
+              Add Fuel
+            </button>
+          </div>
+          <div className="space-y-3">
+            {fuelFields.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)] italic">No fuel entries.</p>
+            ) : (
+              fuelFields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end p-4 rounded-xl border border-dashed border-[var(--border-strong)]"
+                >
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Partner Name *</label>
+                    <label className="field-label">Partner *</label>
                     <input
                       {...register(`fuelEntries.${index}.partnerName`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                    <label className="field-label">Amount *</label>
                     <input
                       type="number"
                       {...register(`fuelEntries.${index}.amount`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                    <label className="field-label">Date *</label>
                     <input
                       type="date"
                       {...register(`fuelEntries.${index}.fuelDate`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                    <input
-                      {...register(`fuelEntries.${index}.notes`)}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
+                    <label className="field-label">Notes</label>
+                    <input {...register(`fuelEntries.${index}.notes`)} className="field" />
                   </div>
                   <button
                     type="button"
                     onClick={() => removeFuel(index)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="btn btn-danger"
                   >
-                    <FaTrash />
+                    <FaTrash size={12} />
                   </button>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
+        </Panel>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-slate-800">Expense Entries</h2>
-              <button
-                type="button"
-                onClick={() => appendExpense({ partnerName: '', title: '', amount: '', date: new Date().toISOString().split('T')[0], notes: '' })}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaPlus />
-                Add Expense
-              </button>
-            </div>
-            <div className="space-y-3">
-              {expenseFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+        <Panel>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <SectionTitle icon={FaReceipt}>Expenses</SectionTitle>
+            <button
+              type="button"
+              onClick={() =>
+                appendExpense({
+                  partnerName: '',
+                  title: '',
+                  amount: '',
+                  date: today,
+                  notes: '',
+                })
+              }
+              className="btn btn-primary text-xs py-2 px-3"
+            >
+              <FaPlus size={10} />
+              Add Expense
+            </button>
+          </div>
+          <div className="space-y-3 mb-4">
+            {expenseFields.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)] italic">No expenses yet.</p>
+            ) : (
+              expenseFields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end p-4 rounded-xl border border-dashed border-[var(--border-strong)]"
+                >
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Partner Name *</label>
+                    <label className="field-label">Partner *</label>
                     <input
                       {...register(`expenseEntries.${index}.partnerName`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Title *</label>
+                    <label className="field-label">Title *</label>
                     <input
                       {...register(`expenseEntries.${index}.title`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+                    <label className="field-label">Amount *</label>
                     <input
                       type="number"
                       {...register(`expenseEntries.${index}.amount`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                    <label className="field-label">Date *</label>
                     <input
                       type="date"
                       {...register(`expenseEntries.${index}.date`, { required: 'Required' })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                    <input
-                      {...register(`expenseEntries.${index}.notes`)}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
+                    <label className="field-label">Notes</label>
+                    <input {...register(`expenseEntries.${index}.notes`)} className="field" />
                   </div>
                   <button
                     type="button"
                     onClick={() => removeExpense(index)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="btn btn-danger"
                   >
-                    <FaTrash />
+                    <FaTrash size={12} />
                   </button>
                 </div>
-              ))}
+              ))
+            )}
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-[var(--warning-soft)] px-4 py-3 border border-[var(--warning)]/20">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              Total Expenses (Fuel + Other)
+            </span>
+            <span className="font-display font-bold text-[var(--warning)]">
+              {formatRs(deal.totals.totalExpenses)}
+            </span>
+          </div>
+        </Panel>
+
+        <Panel>
+          <SectionTitle icon={FaHandshake} className="mb-2">
+            Sale Details
+          </SectionTitle>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            {willSell
+              ? 'Sale price filled → this record will go to Sold Cars.'
+              : 'Leave sale price empty → this record will stay in Draft Cars.'}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="field-label">Sale Date</label>
+              <input type="date" {...register('saleDetails.saleDate')} className="field" />
+            </div>
+            <div>
+              <label className="field-label">Sale Price (Rs)</label>
+              <input
+                type="number"
+                {...register('saleDetails.salePrice')}
+                className="field"
+                placeholder="Leave empty for draft"
+              />
+            </div>
+            <div>
+              <label className="field-label">Sold To</label>
+              <input {...register('saleDetails.soldTo')} className="field" />
+            </div>
+            <div>
+              <label className="field-label">Sale Notes</label>
+              <input {...register('saleDetails.notes')} className="field" />
             </div>
           </div>
+        </Panel>
 
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Adding...' : 'Add Car'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/draft-cars')}
-              className="bg-slate-600 hover:bg-slate-700 text-white px-8 py-3 rounded-lg font-medium transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+        <DealSummary
+          partnerInvestments={watched.partnerInvestments}
+          fuelEntries={watched.fuelEntries}
+          expenseEntries={watched.expenseEntries}
+          purchasePrice={watched.purchasePrice}
+          salePrice={watched.saleDetails?.salePrice}
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="submit" disabled={loading} className="btn btn-primary px-8 py-3.5">
+            {loading ? 'Saving...' : willSell ? 'Save to Sold Cars' : 'Save as Draft'}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/draft-cars')}
+            className="btn btn-secondary px-8 py-3.5"
+          >
+            Cancel
+          </button>
+          <span
+            className={`badge ${willSell ? 'badge-success' : 'badge-warning'} ml-auto`}
+          >
+            {willSell ? 'Will save as Sold' : 'Will save as Draft'}
+          </span>
+        </div>
+      </form>
     </div>
   );
 };

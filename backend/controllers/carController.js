@@ -53,10 +53,17 @@ const getCarById = async (req, res) => {
 
 const createCar = async (req, res) => {
   try {
+    const salePrice = Number(req.body.saleDetails?.salePrice);
+    const hasSale = Number.isFinite(salePrice) && salePrice > 0;
     const carData = {
       ...req.body,
       owner: req.user._id,
+      status: hasSale ? 'sold' : 'draft',
     };
+
+    if (!hasSale) {
+      delete carData.saleDetails;
+    }
 
     const car = await Car.create(carData);
     res.status(201).json(car);
@@ -82,9 +89,36 @@ const updateCar = async (req, res) => {
       return res.status(400).json({ message: 'Cannot edit sold car' });
     }
 
+    const salePrice = Number(req.body.saleDetails?.salePrice);
+    const hasSale = Number.isFinite(salePrice) && salePrice > 0;
+
+    const {
+      saleDetails,
+      status: _status,
+      owner: _owner,
+      _id: _id,
+      ...rest
+    } = req.body;
+
+    const updateData = {
+      ...rest,
+      status: hasSale ? 'sold' : 'draft',
+    };
+
+    if (hasSale) {
+      updateData.saleDetails = {
+        saleDate: saleDetails.saleDate,
+        salePrice,
+        soldTo: saleDetails.soldTo || '',
+        notes: saleDetails.notes || '',
+      };
+    } else {
+      updateData.$unset = { saleDetails: '' };
+    }
+
     const updatedCar = await Car.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -209,19 +243,21 @@ const getDashboardStats = async (req, res) => {
     const soldCars = cars.filter(car => car.status === 'sold');
 
     let totalInvestment = 0;
-    let totalExpenses = 0;
+    let totalExpensesSum = 0;
     let totalProfit = 0;
 
     cars.forEach(car => {
-      const partnerInvTotal = (car.partnerInvestments || []).reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
       const fuelTotal = (car.fuelEntries || []).reduce((sum, fuel) => sum + (Number(fuel.amount) || 0), 0);
-      const expenseTotal = (car.expenseEntries || []).reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-      const carTotalInvestment = partnerInvTotal + fuelTotal + expenseTotal;
-      totalInvestment += carTotalInvestment;
-      totalExpenses += expenseTotal;
+      const expenseOnly = (car.expenseEntries || []).reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+      const carExpenses = fuelTotal + expenseOnly;
+      const purchase = Number(car.purchasePrice) || 0;
+      const totalCost = purchase + carExpenses;
+
+      totalInvestment += purchase;
+      totalExpensesSum += carExpenses;
 
       if (car.status === 'sold' && car.saleDetails?.salePrice) {
-        totalProfit += (Number(car.saleDetails.salePrice) || 0) - carTotalInvestment;
+        totalProfit += (Number(car.saleDetails.salePrice) || 0) - totalCost;
       }
     });
 
@@ -230,7 +266,7 @@ const getDashboardStats = async (req, res) => {
       draftCars: draftCars.length,
       soldCars: soldCars.length,
       totalInvestment,
-      totalExpenses,
+      totalExpenses: totalExpensesSum,
       totalProfit,
     });
   } catch (error) {

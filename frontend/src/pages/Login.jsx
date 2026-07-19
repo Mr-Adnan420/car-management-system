@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
+import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { AuthLayout, FieldError, IconField } from '../components/ui';
 
 const Login = () => {
   const { login } = useAuth();
@@ -29,44 +31,57 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-slate-800">Login</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to manage your inventory and profits."
+      footer={
+        <>
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="text-[var(--accent)] font-semibold hover:underline">
+            Create one
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div>
+          <label className="field-label">Email</label>
+          <IconField icon={FaEnvelope}>
             <input
               type="email"
               {...register('email', { required: 'Email is required' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="field"
+              placeholder="you@dealership.com"
+              autoComplete="email"
             />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
+          </IconField>
+          <FieldError message={errors.email?.message} />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="field-label mb-0">Password</label>
+            <Link to="/forgot-password" className="text-xs font-semibold text-[var(--accent)] hover:underline">
+              Forgot password?
+            </Link>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          <IconField icon={FaLock}>
             <input
               type="password"
               {...register('password', { required: 'Password is required' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="field"
+              placeholder="Enter your password"
+              autoComplete="current-password"
             />
-            {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Loading...' : 'Login'}
-          </button>
-        </form>
-        <div className="mt-6 text-center text-slate-600">
-          Don't have an account? <Link to="/register" className="text-blue-600 hover:underline">Register</Link>
+          </IconField>
+          <FieldError message={errors.password?.message} />
         </div>
-        <div className="mt-4 text-center text-slate-600">
-          <Link to="/forgot-password" className="text-blue-600 hover:underline">Forgot Password?</Link>
-        </div>
-      </div>
-    </div>
+
+        <button type="submit" disabled={loading} className="btn btn-primary w-full py-3.5 mt-2">
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 
