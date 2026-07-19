@@ -25,6 +25,20 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor to handle 401 (expired or invalid token) and break redirection deadlocks
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('userInfo');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const authAPI = {
   register: (data) => api.post('/auth/signup', data),
   login: (data) => api.post('/auth/login', data),
