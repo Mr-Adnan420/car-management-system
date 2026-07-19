@@ -12,7 +12,7 @@ const sendEmail = async (options) => {
   });
 
   const message = {
-    from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
+    from: `${process.env.FROM_NAME || 'Car Management System'} <${process.env.FROM_EMAIL || process.env.EMAIL_USER}>`,
     to: options.email,
     subject: options.subject,
     text: options.message,

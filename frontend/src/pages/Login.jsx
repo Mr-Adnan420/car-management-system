@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useForm } from 'react-hook-form';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
-import { AuthLayout, FieldError, IconField } from '../components/ui';
+import { FaEnvelope, FaLock, FaCar, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const Login = () => {
   const { login } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -31,57 +33,84 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to manage your inventory and profits."
-      footer={
-        <>
-          Don&apos;t have an account?{' '}
-          <Link to="/register" className="text-[var(--accent)] font-semibold hover:underline">
-            Create one
-          </Link>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div>
-          <label className="field-label">Email</label>
-          <IconField icon={FaEnvelope}>
-            <input
-              type="email"
-              {...register('email', { required: 'Email is required' })}
-              className="field"
-              placeholder="you@dealership.com"
-              autoComplete="email"
-            />
-          </IconField>
-          <FieldError message={errors.email?.message} />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0">
+        <div className={`absolute inset-0 ${theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50' : 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'}`}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="field-label mb-0">Password</label>
-            <Link to="/forgot-password" className="text-xs font-semibold text-[var(--accent)] hover:underline">
-              Forgot password?
-            </Link>
+      <div className="w-full max-w-md z-10">
+        <div className="text-center mb-8">
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-600/80 to-purple-600/80 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-blue-500/30 backdrop-blur-xl border border-white/30">
+            <FaCar size={52} className="text-white" />
           </div>
-          <IconField icon={FaLock}>
-            <input
-              type="password"
-              {...register('password', { required: 'Password is required' })}
-              className="field"
-              placeholder="Enter your password"
-              autoComplete="current-password"
-            />
-          </IconField>
-          <FieldError message={errors.password?.message} />
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">Welcome Back</h1>
+          <p className={`${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Sign in to your account to continue</p>
         </div>
 
-        <button type="submit" disabled={loading} className="btn btn-primary w-full py-3.5 mt-2">
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
-      </form>
-    </AuthLayout>
+        <div className={`rounded-3xl shadow-2xl p-10 ${theme === 'light' ? 'bg-white/70 backdrop-blur-xl border border-white/50' : 'bg-slate-800/70 backdrop-blur-xl border border-slate-700/50'}`}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <label className={`block text-sm font-semibold ${theme === 'light' ? 'text-slate-700' : 'text-slate-200'}`}>Email</label>
+              <div className="relative">
+                <FaEnvelope className={`absolute left-5 top-1/2 -translate-y-1/2 ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`} />
+                <input
+                  type="email"
+                  {...register('email', { required: 'Email is required' })}
+                  className={`w-full pl-14 pr-5 py-4 rounded-xl outline-none transition-all duration-300 ${theme === 'light' ? 'bg-white/80 border border-slate-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-slate-800' : 'bg-slate-900/50 border border-slate-600 focus:ring-4 focus:ring-blue-900 focus:border-blue-500 text-white placeholder-slate-500'}`}
+                  placeholder="Enter your email"
+                />
+              </div>
+              {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className={`block text-sm font-semibold ${theme === 'light' ? 'text-slate-700' : 'text-slate-200'}`}>Password</label>
+                <Link to="/forgot-password" className={`text-sm font-medium ${theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'}`}>
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <FaLock className={`absolute left-5 top-1/2 -translate-y-1/2 ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password', { required: 'Password is required' })}
+                  className={`w-full pl-14 pr-12 py-4 rounded-xl outline-none transition-all duration-300 ${theme === 'light' ? 'bg-white/80 border border-slate-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-slate-800' : 'bg-slate-900/50 border border-slate-600 focus:ring-4 focus:ring-blue-900 focus:border-blue-500 text-white placeholder-slate-500'}`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600/80 to-purple-600/80 hover:from-blue-700/80 hover:to-purple-700/80 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-10 text-center">
+            <p className={`${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>
+              Don't have an account?{' '}
+              <Link to="/register" className={`font-semibold hover:underline ${theme === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'}`}>
+                Create one
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
