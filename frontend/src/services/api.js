@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+// Prefer VITE_API_URL in production. Locally, use the same host as the page
+// so phone access via LAN IP talks to this machine's backend (not phone localhost).
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 const api = axios.create({
   baseURL: API_URL,

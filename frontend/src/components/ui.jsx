@@ -123,11 +123,10 @@ export function FieldError({ message }) {
 export function IconField({ icon: Icon, children }) {
   return (
     <div className="relative">
-      <Icon
-        size={14}
-        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-soft)] pointer-events-none"
-      />
-      <div className="[&_input]:pl-10">{children}</div>
+      <span className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex w-10 items-center justify-center text-[var(--text-soft)]">
+        <Icon size={14} aria-hidden className="block shrink-0" />
+      </span>
+      <div className="w-full [&_input]:pl-10">{children}</div>
     </div>
   );
 }
